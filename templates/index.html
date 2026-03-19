@@ -14,24 +14,22 @@
         .header h1 { font-size: 24px; color: #1a1a1a; }
         .header p { color: #666; margin-top: 8px; }
 
-        /* 上传区域 */
-        .upload-card {
-            background: #fff; border-radius: 12px; padding: 30px;
+        .card {
+            background: #fff; border-radius: 12px; padding: 24px;
             box-shadow: 0 2px 8px rgba(0,0,0,0.08); margin-bottom: 20px;
         }
 
         .form-row { display: flex; gap: 16px; align-items: flex-end; flex-wrap: wrap; }
         .form-group { display: flex; flex-direction: column; gap: 6px; }
         .form-group label { font-size: 14px; color: #666; font-weight: 500; }
-        .form-group select, .form-group input[type="number"] {
+        .form-group select {
             padding: 8px 12px; border: 1px solid #d9d9d9; border-radius: 6px;
             font-size: 14px; background: #fff; min-width: 100px;
         }
 
         .upload-area {
             border: 2px dashed #d9d9d9; border-radius: 8px; padding: 40px;
-            text-align: center; cursor: pointer; transition: all 0.3s;
-            margin: 20px 0;
+            text-align: center; cursor: pointer; transition: all 0.3s; margin: 20px 0;
         }
         .upload-area:hover, .upload-area.dragover { border-color: #1677ff; background: #f0f5ff; }
         .upload-area .icon { font-size: 40px; color: #1677ff; }
@@ -45,10 +43,7 @@
         .btn-primary { background: #1677ff; color: #fff; }
         .btn-primary:hover { background: #4096ff; }
         .btn-primary:disabled { background: #d9d9d9; cursor: not-allowed; }
-        .btn-success { background: #52c41a; color: #fff; }
-        .btn-success:hover { background: #73d13d; }
 
-        /* 加载状态 */
         .loading { display: none; text-align: center; padding: 40px; }
         .loading .spinner {
             width: 40px; height: 40px; border: 4px solid #f0f0f0;
@@ -57,67 +52,90 @@
         }
         @keyframes spin { to { transform: rotate(360deg); } }
 
-        /* 结果区域 */
         .result-section { display: none; }
 
         .stats-row { display: flex; gap: 12px; margin-bottom: 20px; flex-wrap: wrap; }
         .stat-card {
             background: #fff; border-radius: 8px; padding: 16px 20px;
-            flex: 1; min-width: 140px; box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+            flex: 1; min-width: 120px; box-shadow: 0 1px 4px rgba(0,0,0,0.06);
         }
         .stat-card .label { font-size: 13px; color: #999; }
         .stat-card .value { font-size: 24px; font-weight: 600; margin-top: 4px; }
         .stat-card .value.blue { color: #1677ff; }
         .stat-card .value.green { color: #52c41a; }
-        .stat-card .value.orange { color: #fa8c16; }
+        .stat-card .value.red { color: #ff4d4f; }
 
-        /* 分类标签 */
-        .group-tags { margin-bottom: 20px; }
-        .group-tag {
-            display: inline-block; padding: 4px 12px; margin: 4px;
-            background: #f0f5ff; color: #1677ff; border-radius: 4px; font-size: 13px;
+        /* 部门分组 */
+        .dept-group { margin-bottom: 16px; }
+        .dept-header {
+            display: flex; align-items: center; gap: 10px;
+            padding: 12px 16px; background: #fafafa; border-radius: 8px 8px 0 0;
+            border-bottom: 1px solid #f0f0f0; cursor: pointer; user-select: none;
+        }
+        .dept-header:hover { background: #f5f5f5; }
+        .dept-header .dept-name { font-size: 16px; font-weight: 600; }
+        .dept-header .dept-count {
+            font-size: 12px; background: #1677ff; color: #fff;
+            padding: 2px 8px; border-radius: 10px;
+        }
+        .dept-header .arrow {
+            margin-left: auto; transition: transform 0.3s; font-size: 12px; color: #999;
+        }
+        .dept-header.collapsed .arrow { transform: rotate(-90deg); }
+
+        .dept-body { border-radius: 0 0 8px 8px; overflow: hidden; }
+        .dept-body.collapsed { display: none; }
+
+        .emp-list { display: flex; flex-wrap: wrap; gap: 8px; padding: 16px; }
+        .emp-tag {
+            display: inline-flex; align-items: center; gap: 6px;
+            padding: 6px 14px; background: #f0f5ff; color: #1677ff;
+            border-radius: 6px; font-size: 14px; transition: all 0.2s;
+        }
+        .emp-tag:hover { background: #d6e4ff; }
+        .emp-tag.resigned {
+            background: #fff1f0; color: #ff4d4f;
+            text-decoration: line-through;
         }
 
-        /* 表格 */
-        .table-card {
-            background: #fff; border-radius: 12px; overflow: hidden;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.08); margin-bottom: 20px;
+        /* 生产部工资表格 */
+        .section-title {
+            font-size: 18px; font-weight: 600; margin: 30px 0 16px;
+            padding-left: 12px; border-left: 4px solid #1677ff;
         }
-        .table-card h3 { padding: 16px 20px; border-bottom: 1px solid #f0f0f0; font-size: 16px; }
 
         .table-wrapper { overflow-x: auto; }
-        table { width: 100%; border-collapse: collapse; font-size: 13px; }
-        th { background: #fafafa; padding: 10px 12px; text-align: left; font-weight: 500; color: #666; white-space: nowrap; }
-        td { padding: 10px 12px; border-top: 1px solid #f0f0f0; white-space: nowrap; }
-        tr:hover td { background: #f5f5f5; }
-        .salary-cell { font-weight: 600; color: #1677ff; }
-
-        .download-bar {
-            position: sticky; bottom: 0; background: #fff; padding: 16px 20px;
-            border-top: 1px solid #f0f0f0; text-align: center;
-            box-shadow: 0 -2px 8px rgba(0,0,0,0.06);
+        table { width: 100%; border-collapse: collapse; font-size: 14px; }
+        th {
+            background: #fafafa; padding: 12px 14px; text-align: left;
+            font-weight: 500; color: #666; white-space: nowrap;
+            border-bottom: 2px solid #f0f0f0;
         }
-
-        /* 标签切换 */
-        .tabs { display: flex; gap: 0; margin-bottom: 0; }
-        .tab {
-            padding: 10px 20px; cursor: pointer; border-bottom: 2px solid transparent;
-            font-size: 14px; color: #666; transition: all 0.3s;
+        td {
+            padding: 12px 14px; border-bottom: 1px solid #f0f0f0;
+            white-space: nowrap;
         }
-        .tab.active { color: #1677ff; border-bottom-color: #1677ff; font-weight: 500; }
-        .tab-content { display: none; }
-        .tab-content.active { display: block; }
+        tr:hover td { background: #fafafa; }
+
+        .shift-tag {
+            display: inline-block; padding: 2px 10px; border-radius: 4px;
+            font-size: 12px; font-weight: 500;
+        }
+        .shift-tag.day { background: #fff7e6; color: #d46b08; }
+        .shift-tag.night { background: #e6f4ff; color: #0958d9; }
+
+        .salary-total { font-weight: 700; color: #1677ff; font-size: 15px; }
     </style>
 </head>
 <body>
 <div class="container">
     <div class="header">
         <h1>宏耀考勤工资计算系统</h1>
-        <p>上传钉钉考勤报表，自动计算每位员工工资</p>
+        <p>上传钉钉考勤报表，自动解析人员与部门</p>
     </div>
 
     <!-- 上传区 -->
-    <div class="upload-card">
+    <div class="card">
         <form id="uploadForm">
             <div class="form-row">
                 <div class="form-group">
@@ -137,11 +155,7 @@
                     </select>
                 </div>
                 <div class="form-group">
-                    <label>法定节假日天数</label>
-                    <input type="number" name="holidays" id="holidays" value="0" min="0" max="10">
-                </div>
-                <div class="form-group">
-                    <button type="submit" class="btn btn-primary" id="calcBtn" disabled>开始计算</button>
+                    <button type="submit" class="btn btn-primary" id="parseBtn" disabled>解析计算</button>
                 </div>
             </div>
 
@@ -158,12 +172,12 @@
     <!-- 加载中 -->
     <div class="loading" id="loading">
         <div class="spinner"></div>
-        <p>正在计算工资，请稍候...</p>
+        <p>正在解析考勤表...</p>
     </div>
 
     <!-- 结果区 -->
     <div class="result-section" id="resultSection">
-        <!-- 统计卡片 -->
+        <!-- 统计 -->
         <div class="stats-row">
             <div class="stat-card">
                 <div class="label">日期范围</div>
@@ -174,50 +188,44 @@
                 <div class="value blue" id="statTotal"></div>
             </div>
             <div class="stat-card">
-                <div class="label">已计算</div>
-                <div class="value green" id="statCalc"></div>
+                <div class="label">在职</div>
+                <div class="value green" id="statActive"></div>
             </div>
             <div class="stat-card">
-                <div class="label">跳过</div>
-                <div class="value" id="statSkip"></div>
-            </div>
-            <div class="stat-card">
-                <div class="label">异常记录</div>
-                <div class="value orange" id="statAnomaly"></div>
+                <div class="label">离职</div>
+                <div class="value red" id="statResigned"></div>
             </div>
         </div>
 
-        <!-- 分类标签 -->
-        <div class="group-tags" id="groupTags"></div>
+        <!-- 部门分组列表 -->
+        <div id="deptList"></div>
 
-        <!-- 表格区域 -->
-        <div class="table-card">
-            <div class="tabs" id="tabs">
-                <div class="tab active" data-tab="salary">工资明细</div>
-                <div class="tab" data-tab="anomaly">异常报告</div>
-                <div class="tab" data-tab="skipped">跳过人员</div>
-            </div>
-
-            <div class="tab-content active" id="tab-salary">
+        <!-- 生产部工资明细 -->
+        <div id="productionSection" style="display:none">
+            <div class="section-title">生产部工资明细</div>
+            <div class="card" style="padding:0; overflow:hidden;">
                 <div class="table-wrapper">
-                    <table id="salaryTable"><thead></thead><tbody></tbody></table>
+                    <table id="productionTable">
+                        <thead>
+                            <tr>
+                                <th>姓名</th>
+                                <th>班次</th>
+                                <th>工作日出勤(天)</th>
+                                <th>周末出勤(天)</th>
+                                <th>基本工资</th>
+                                <th>加班工时(h)</th>
+                                <th>加班工资</th>
+                                <th>周末工时(h)</th>
+                                <th>周末工资</th>
+                                <th>夜班天数</th>
+                                <th>夜班补贴</th>
+                                <th>应发合计</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
                 </div>
             </div>
-            <div class="tab-content" id="tab-anomaly">
-                <div class="table-wrapper">
-                    <table id="anomalyTable"><thead></thead><tbody></tbody></table>
-                </div>
-            </div>
-            <div class="tab-content" id="tab-skipped">
-                <div class="table-wrapper">
-                    <table id="skippedTable"><thead></thead><tbody></tbody></table>
-                </div>
-            </div>
-        </div>
-
-        <!-- 下载按钮 -->
-        <div class="download-bar">
-            <a id="downloadBtn" class="btn btn-success">下载 Excel 结果</a>
         </div>
     </div>
 </div>
@@ -225,16 +233,14 @@
 <script>
 const dropZone = document.getElementById('dropZone');
 const fileInput = document.getElementById('fileInput');
-const calcBtn = document.getElementById('calcBtn');
+const parseBtn = document.getElementById('parseBtn');
 let selectedFile = null;
 
-// 文件选择
 dropZone.addEventListener('click', () => fileInput.click());
 fileInput.addEventListener('change', (e) => {
     if (e.target.files[0]) selectFile(e.target.files[0]);
 });
 
-// 拖拽
 dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('dragover'); });
 dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
 dropZone.addEventListener('drop', (e) => {
@@ -250,10 +256,9 @@ function selectFile(file) {
     }
     selectedFile = file;
     document.getElementById('fileName').textContent = file.name;
-    calcBtn.disabled = false;
+    parseBtn.disabled = false;
 }
 
-// 表单提交
 document.getElementById('uploadForm').addEventListener('submit', async (e) => {
     e.preventDefault();
     if (!selectedFile) return;
@@ -262,14 +267,13 @@ document.getElementById('uploadForm').addEventListener('submit', async (e) => {
     formData.append('file', selectedFile);
     formData.append('year', document.getElementById('year').value);
     formData.append('month', document.getElementById('month').value);
-    formData.append('holidays', document.getElementById('holidays').value);
 
     document.getElementById('loading').style.display = 'block';
     document.getElementById('resultSection').style.display = 'none';
-    calcBtn.disabled = true;
+    parseBtn.disabled = true;
 
     try {
-        const res = await fetch('/calculate', { method: 'POST', body: formData });
+        const res = await fetch('/parse', { method: 'POST', body: formData });
         const data = await res.json();
 
         if (data.error) {
@@ -277,107 +281,97 @@ document.getElementById('uploadForm').addEventListener('submit', async (e) => {
             return;
         }
 
-        renderResults(data);
+        renderResult(data);
     } catch (err) {
         alert('请求失败: ' + err.message);
     } finally {
         document.getElementById('loading').style.display = 'none';
-        calcBtn.disabled = false;
+        parseBtn.disabled = false;
     }
 });
 
-// 标签切换
-document.getElementById('tabs').addEventListener('click', (e) => {
-    if (!e.target.classList.contains('tab')) return;
-    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-    document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
-    e.target.classList.add('active');
-    document.getElementById('tab-' + e.target.dataset.tab).classList.add('active');
-});
+function fmt(n) {
+    return typeof n === 'number' ? (Number.isInteger(n) ? n : n.toFixed(2)) : n;
+}
 
-// 字段中文映射
-const fieldNames = {
-    required_days: '应出勤', actual_days: '实际出勤',
-    workday_days: '工作日出勤', weekend_days: '周末出勤',
-    total_hours: '总工时', hourly_rate: '时薪',
-    base_salary: '基本工资', position_salary: '岗位工资',
-    weekday_ot_hours: '工作日加班H', weekday_ot_salary: '工作日加班工资',
-    overtime_hours: '加班H', ot_hourly_rate: '加班时薪', overtime_salary: '加班工资',
-    weekend_hours: '周末工时', weekend_salary: '周末工资',
-    night_shift_days: '夜班天数', night_snack_subsidy: '夜宵补贴',
-    full_attendance_bonus: '全勤奖', high_temp_subsidy: '高温补贴',
-    subsidy: '补贴', holidays: '节假日天数', holiday_salary: '节假日工资',
-    total_salary: '应发合计',
-};
-
-function renderResults(data) {
+function renderResult(data) {
     document.getElementById('statRange').textContent = data.date_range;
-    document.getElementById('statTotal').textContent = data.total_employees;
-    document.getElementById('statCalc').textContent = data.calculated;
-    document.getElementById('statSkip').textContent = data.skipped_count;
-    document.getElementById('statAnomaly').textContent = data.anomaly_count;
+    document.getElementById('statTotal').textContent = data.total_count;
+    document.getElementById('statActive').textContent = data.active_count;
+    document.getElementById('statResigned').textContent = data.resigned_count;
 
-    // 分类标签
-    const tagsHtml = Object.entries(data.rule_groups)
-        .map(([rule, names]) => `<span class="group-tag">${rule} (${names.length}人)</span>`)
-        .join('');
-    document.getElementById('groupTags').innerHTML = tagsHtml;
+    // 部门分组
+    let html = '';
+    for (const [dept, emps] of Object.entries(data.departments)) {
+        html += `
+        <div class="dept-group card">
+            <div class="dept-header" onclick="toggleDept(this)">
+                <span class="dept-name">${dept}</span>
+                <span class="dept-count">${emps.length}人</span>
+                <span class="arrow">▼</span>
+            </div>
+            <div class="dept-body">
+                <div class="emp-list">
+                    ${emps.map(e => `<span class="emp-tag">${e.name}</span>`).join('')}
+                </div>
+            </div>
+        </div>`;
+    }
 
-    // 工资表 - 固定列
-    const fixedCols = ['name', 'department', 'rule'];
-    const detailKeys = new Set();
-    data.results.forEach(r => Object.keys(r.details).forEach(k => detailKeys.add(k)));
+    if (data.resigned && data.resigned.length > 0) {
+        html += `
+        <div class="dept-group card">
+            <div class="dept-header collapsed" onclick="toggleDept(this)">
+                <span class="dept-name">离职人员</span>
+                <span class="dept-count" style="background:#ff4d4f">${data.resigned.length}人</span>
+                <span class="arrow">▼</span>
+            </div>
+            <div class="dept-body collapsed">
+                <div class="emp-list">
+                    ${data.resigned.map(e => `<span class="emp-tag resigned">${e.name}（${e.department}）</span>`).join('')}
+                </div>
+            </div>
+        </div>`;
+    }
 
-    // 按优先级排序
-    const keyOrder = [
-        'required_days','actual_days','workday_days','weekend_days',
-        'total_hours','hourly_rate','base_salary','position_salary',
-        'weekday_ot_hours','weekday_ot_salary','overtime_hours','ot_hourly_rate','overtime_salary',
-        'weekend_hours','weekend_salary','night_shift_days','night_snack_subsidy',
-        'full_attendance_bonus','high_temp_subsidy','subsidy','holidays','holiday_salary','total_salary'
-    ];
-    const orderedKeys = keyOrder.filter(k => detailKeys.has(k));
-    orderedKeys.push(...[...detailKeys].filter(k => !keyOrder.includes(k)).sort());
+    document.getElementById('deptList').innerHTML = html;
 
-    let thead = '<tr><th>姓名</th><th>部门</th><th>规则</th>';
-    orderedKeys.forEach(k => { thead += `<th>${fieldNames[k] || k}</th>`; });
-    thead += '</tr>';
+    // 生产部工资表
+    const pr = data.production_results;
+    const prodSection = document.getElementById('productionSection');
 
-    let tbody = '';
-    data.results.forEach(r => {
-        tbody += `<tr><td>${r.name}</td><td>${r.department}</td><td>${r.rule}</td>`;
-        orderedKeys.forEach(k => {
-            let val = r.details[k];
-            if (val === null || val === undefined || val === '') val = '-';
-            else if (typeof val === 'number') val = Number.isInteger(val) ? val : val.toFixed(2);
-            const cls = k === 'total_salary' ? ' class="salary-cell"' : '';
-            tbody += `<td${cls}>${val}</td>`;
+    if (pr && pr.length > 0) {
+        let tbody = '';
+        pr.forEach(r => {
+            const shiftCls = r.shift_type === '夜班' ? 'night' : 'day';
+            tbody += `<tr>
+                <td>${r.name}</td>
+                <td><span class="shift-tag ${shiftCls}">${r.shift_type}</span></td>
+                <td>${r.workday_days}</td>
+                <td>${r.weekend_days}</td>
+                <td>${fmt(r.base_salary)}</td>
+                <td>${r.weekday_ot_hours}</td>
+                <td>${fmt(r.weekday_ot_salary)}</td>
+                <td>${r.weekend_hours}</td>
+                <td>${fmt(r.weekend_salary)}</td>
+                <td>${r.night_shift_days}</td>
+                <td>${fmt(r.night_snack)}</td>
+                <td class="salary-total">${fmt(r.total_salary)}</td>
+            </tr>`;
         });
-        tbody += '</tr>';
-    });
-
-    document.querySelector('#salaryTable thead').innerHTML = thead;
-    document.querySelector('#salaryTable tbody').innerHTML = tbody;
-
-    // 异常表
-    document.querySelector('#anomalyTable thead').innerHTML = '<tr><th>姓名</th><th>日期</th><th>类型</th><th>打卡</th></tr>';
-    // anomalies are in the results' anomalies - fetch from download
-    document.querySelector('#anomalyTable tbody').innerHTML =
-        `<tr><td colspan="4" style="text-align:center;color:#999;padding:20px">共 ${data.anomaly_count} 条异常，请下载 Excel 查看详情</td></tr>`;
-
-    // 跳过表
-    document.querySelector('#skippedTable thead').innerHTML = '<tr><th>姓名</th><th>部门</th><th>原因</th></tr>';
-    let skipBody = '';
-    data.skipped.forEach(s => {
-        skipBody += `<tr><td>${s.name}</td><td>${s.department}</td><td>${s.reason}</td></tr>`;
-    });
-    document.querySelector('#skippedTable tbody').innerHTML = skipBody || '<tr><td colspan="3" style="text-align:center;color:#999">无</td></tr>';
-
-    // 下载按钮
-    document.getElementById('downloadBtn').href = '/download/' + encodeURIComponent(data.download_file);
+        document.querySelector('#productionTable tbody').innerHTML = tbody;
+        prodSection.style.display = 'block';
+    } else {
+        prodSection.style.display = 'none';
+    }
 
     document.getElementById('resultSection').style.display = 'block';
     document.getElementById('resultSection').scrollIntoView({ behavior: 'smooth' });
+}
+
+function toggleDept(header) {
+    header.classList.toggle('collapsed');
+    header.nextElementSibling.classList.toggle('collapsed');
 }
 </script>
 </body>
