@@ -76,14 +76,14 @@ def round_half_down(hours):
 def detect_shift(times):
     """
     判断班次：
-    - 首次打卡在 19:00~20:00 之间 → 夜班
+    - 最后一个打卡时间在 08:00~09:00 之间 → 夜班
     - 否则 → 白班
     """
     if not times:
         return 'unknown'
-    t19 = parse_time("19:00")
-    t20 = parse_time("20:00")
-    return 'night' if t19 <= times[0] <= t20 else 'day'
+    t08 = parse_time("08:00")
+    t09 = parse_time("09:00")
+    return 'night' if t08 <= times[-1] <= t09 else 'day'
 
 
 def calc_work_hours(times, shift):
