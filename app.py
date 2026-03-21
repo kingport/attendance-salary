@@ -18,6 +18,28 @@ app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB
 # 生产部排除人员
 PRODUCTION_EXCLUDE = ['王琴', '欧阳宇', '李乐平', '熊其享']
 
+# 模房排除人员（有特殊规则）
+MOLD_EXCLUDE = ['张红亮', '张翱']
+
+# 技术部：从其他部门走技术部规则的特殊人员
+TECH_SPECIAL = ['李乐平', '熊其享', '张红亮', '耿红志']
+
+# 技术部：应出勤 = 当月天数 - 周日天数 的人员
+TECH_SUNDAY_REST = ['耿红志', '张红亮', '黎钦德', '李乐平', '熊其享']
+
+# 技术部：固定底薪 + 岗位工资
+TECH_SALARY = {
+    '耿红志': {'base': 3730, 'position': 4270},
+    '张红亮': {'base': 3730, 'position': 8770},
+    '黎钦德': {'base': 3730, 'position': 7970},
+    '刘高伟': {'base': 4020, 'position': 3980},
+    '陶发志': {'base': 4020, 'position': 5180},
+    '王德全': {'base': 4020, 'position': 5480},
+    '熊庆':   {'base': 2730, 'position': 4270},
+    '李乐平': {'base': 2730, 'position': 3270},
+    '熊其享': {'base': 2730, 'position': 2270},
+}
+
 
 def clean_name(name):
     """去除姓名中的（离职）等后缀"""
@@ -155,6 +177,168 @@ def calc_production_employee(name, records, year, month):
     }
 
 
+def calc_production2_employee(name, records, year, month):
+    """
+    计算生产部2（计时制）单个员工工资
+    规则：
+    - 每日工时0.5H阶梯向下取整（<0.5不计，0.5~1计0.5，1~1.5计1...）
+    - 当月总工时 × 21元/h
+    - 不区分工作日/周末
+    """
+    total_hours = 0
+    work_days = 0
+
+    for rec in records:
+        punch_str = rec.get('punch_str', '')
+        times = parse_punch_records(punch_str)
+
+        if len(times) < 2:
+            continue
+
+        shift = detect_shift(times)
+        hours = calc_work_hours(times, shift)
+
+        if hours >= 0.5:
+            total_hours += hours
+            work_days += 1
+
+    total_salary = round(total_hours * 21, 2)
+
+    return {
+        'name': name,
+        'work_days': work_days,
+        'total_hours': total_hours,
+        'hourly_rate': 21,
+        'total_salary': total_salary,
+    }
+
+
+def count_sundays(year, month):
+    """计算指定月份的周日天数"""
+    _, days = calendar.monthrange(year, month)
+    return sum(1 for d in range(1, days + 1) if calendar.weekday(year, month, d) == 6)
+
+
+def calc_tech_employee(name, records, year, month, holidays=0):
+    """
+    技术部工资计算
+    - 应出勤：TECH_SUNDAY_REST人员=当月天数-周日天数，其他=28天
+    - 实际出勤：有打卡记录即算出勤（>=1次打卡），无需算加班
+    - 基本工资 = 底薪 / 应出勤 × 实际出勤
+    - 岗位工资 = 岗位 / 应出勤 × 实际出勤
+    - 节假日工资 = (底薪+岗位) / 应出勤 / 12 * 8 * 节假日天数（不计入出勤）
+    - 高温补贴：7-10月 150元（仅技术部本部，不含特殊人员）
+    """
+    if name in TECH_SUNDAY_REST:
+        total_days = calendar.monthrange(year, month)[1]
+        sundays = count_sundays(year, month)
+        required_days = total_days - sundays
+    else:
+        required_days = 28
+
+    actual_days = 0
+    for rec in records:
+        punch_str = rec.get('punch_str', '')
+        times = parse_punch_records(punch_str)
+        if len(times) >= 1:
+            actual_days += 1
+
+    salary_info = TECH_SALARY.get(name, {'base': 0, 'position': 0})
+    base_total = salary_info['base']
+    position_total = salary_info['position']
+
+    if required_days > 0:
+        base_salary = round(base_total / required_days * actual_days, 2)
+        position_salary = round(position_total / required_days * actual_days, 2)
+    else:
+        base_salary = 0
+        position_salary = 0
+
+    # 节假日工资 = (底薪+岗位) / 应出勤 / 12 * 8 * 节假日天数
+    holiday_salary = 0
+    if holidays > 0 and required_days > 0:
+        holiday_salary = round((base_total + position_total) / required_days / 12 * 8 * holidays, 2)
+
+    # 高温补贴：7-10月，仅技术部本部（不含特殊人员）
+    is_tech_native = name not in TECH_SPECIAL
+    high_temp = 150 if (month in [7, 8, 9, 10] and is_tech_native) else 0
+
+    total_salary = round(base_salary + position_salary + holiday_salary + high_temp, 2)
+
+    return {
+        'name': name,
+        'special': name in TECH_SPECIAL,
+        'required_days': required_days,
+        'actual_days': actual_days,
+        'base_total': base_total,
+        'position_total': position_total,
+        'base_salary': base_salary,
+        'position_salary': position_salary,
+        'holidays': holidays,
+        'holiday_salary': holiday_salary,
+        'high_temp': high_temp,
+        'total_salary': total_salary,
+    }
+
+
+def calc_ouyang(name, records, year, month, holidays=0):
+    """
+    欧阳宇专属规则
+    - 应出勤 = 当月天数 - 周日天数
+    - 只有1个打卡也视为出勤
+    - 基本工资2730 / 应出勤 × 实际出勤
+    - 岗位工资3970 / 应出勤 × 实际出勤
+    - 节假日工资 = (2730+3970) / 应出勤 / 12 * 8 * 节假日天数（不计入出勤）
+    - 补贴 = 300 / 应出勤 × 实际出勤
+    - 无其他奖金补贴
+    """
+    total_days = calendar.monthrange(year, month)[1]
+    sundays = count_sundays(year, month)
+    required_days = total_days - sundays
+
+    actual_days = 0
+    for rec in records:
+        punch_str = rec.get('punch_str', '')
+        times = parse_punch_records(punch_str)
+        if len(times) >= 1:  # 1次打卡也算出勤
+            actual_days += 1
+
+    base_total = 2730
+    position_total = 3970
+    subsidy_total = 300
+
+    if required_days > 0:
+        base_salary = round(base_total / required_days * actual_days, 2)
+        position_salary = round(position_total / required_days * actual_days, 2)
+        subsidy = round(subsidy_total / required_days * actual_days, 2)
+    else:
+        base_salary = 0
+        position_salary = 0
+        subsidy = 0
+
+    # 节假日工资 = (底薪+岗位) / 应出勤 / 12 * 8 * 节假日天数
+    holiday_salary = 0
+    if holidays > 0 and required_days > 0:
+        holiday_salary = round((base_total + position_total) / required_days / 12 * 8 * holidays, 2)
+
+    total_salary = round(base_salary + position_salary + subsidy + holiday_salary, 2)
+
+    return {
+        'name': name,
+        'special': True,
+        'required_days': required_days,
+        'actual_days': actual_days,
+        'base_total': base_total,
+        'position_total': position_total,
+        'base_salary': base_salary,
+        'position_salary': position_salary,
+        'subsidy': subsidy,
+        'holidays': holidays,
+        'holiday_salary': holiday_salary,
+        'total_salary': total_salary,
+    }
+
+
 def parse_excel(filepath, year, month):
     """解析钉钉考勤报表，提取人员、部门、打卡记录"""
     wb = openpyxl.load_workbook(filepath, read_only=False)
@@ -248,6 +432,7 @@ def parse():
 
     year = int(request.form.get('year', datetime.now().year))
     month = int(request.form.get('month', datetime.now().month))
+    holidays = int(request.form.get('holidays', 0))
 
     os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
     filepath = os.path.join(app.config['UPLOAD_FOLDER'], file.filename)
@@ -260,6 +445,11 @@ def parse():
         dept_groups = {}
         resigned = []
         production_results = []
+        production2_results = []
+        mold_results = []
+        tech_results = []
+        # 收集需要走技术部规则的特殊人员（跨部门）
+        tech_special_emps = []
 
         for emp in data['employees']:
             if emp['has_resigned']:
@@ -272,12 +462,61 @@ def parse():
                 'department': emp['department'],
             })
 
+            # 特殊人员：走技术部规则（来自其他部门）
+            if emp['name'] in TECH_SPECIAL and dept != '技术部':
+                tech_special_emps.append(emp)
+                continue  # 不再走各自部门的计算
+
+            # 欧阳宇：专属规则，归入生产部展示
+            if emp['name'] == '欧阳宇':
+                result = calc_ouyang(
+                    emp['name'], emp['records'], year, month, holidays
+                )
+                production_results.append(result)
+                continue
+
             # 生产部员工（排除4人）计算工资
             if dept == '生产部' and emp['name'] not in PRODUCTION_EXCLUDE:
                 result = calc_production_employee(
                     emp['name'], emp['records'], year, month
                 )
                 production_results.append(result)
+
+            # 生产部2（计时制）
+            if dept == '生产部2':
+                result = calc_production2_employee(
+                    emp['name'], emp['records'], year, month
+                )
+                production2_results.append(result)
+
+            # 模房
+            if dept == '模房' and emp['name'] not in MOLD_EXCLUDE:
+                if emp['name'] == '张翱':
+                    result = calc_production_employee(
+                        emp['name'], emp['records'], year, month
+                    )
+                    result['special'] = True
+                    mold_results.append(result)
+                else:
+                    result = calc_production2_employee(
+                        emp['name'], emp['records'], year, month
+                    )
+                    result['special'] = False
+                    mold_results.append(result)
+
+            # 技术部本部
+            if dept == '技术部':
+                result = calc_tech_employee(
+                    emp['name'], emp['records'], year, month, holidays
+                )
+                tech_results.append(result)
+
+        # 计算特殊人员（走技术部规则）
+        for emp in tech_special_emps:
+            result = calc_tech_employee(
+                emp['name'], emp['records'], year, month, holidays
+            )
+            tech_results.append(result)
 
         return jsonify({
             'success': True,
@@ -288,6 +527,9 @@ def parse():
             'departments': {dept: emps for dept, emps in sorted(dept_groups.items())},
             'resigned': [{'name': e['name'], 'department': e['department']} for e in resigned],
             'production_results': production_results,
+            'production2_results': production2_results,
+            'mold_results': mold_results,
+            'tech_results': tech_results,
         })
     except Exception as e:
         import traceback

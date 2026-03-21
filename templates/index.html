@@ -125,6 +125,12 @@
         .shift-tag.night { background: #e6f4ff; color: #0958d9; }
 
         .salary-total { font-weight: 700; color: #1677ff; font-size: 15px; }
+
+        .special-tag {
+            display: inline-block; padding: 2px 8px; border-radius: 4px;
+            font-size: 11px; font-weight: 500; background: #fff0f6; color: #c41d7f;
+            margin-left: 6px;
+        }
     </style>
 </head>
 <body>
@@ -153,6 +159,11 @@
                         <option value="{{ m }}" {{ 'selected' if m == current_month }}>{{ m }}月</option>
                         {% endfor %}
                     </select>
+                </div>
+                <div class="form-group">
+                    <label>法定节假日(天)</label>
+                    <input type="number" name="holidays" id="holidays" value="0" min="0" max="10"
+                        style="padding:8px 12px;border:1px solid #d9d9d9;border-radius:6px;font-size:14px;width:80px;">
                 </div>
                 <div class="form-group">
                     <button type="submit" class="btn btn-primary" id="parseBtn" disabled>解析计算</button>
@@ -227,6 +238,83 @@
                 </div>
             </div>
         </div>
+
+        <!-- 生产部2工资明细 -->
+        <div id="production2Section" style="display:none">
+            <div class="section-title">生产部2工资明细（计时制）</div>
+            <div class="card" style="padding:0; overflow:hidden;">
+                <div class="table-wrapper">
+                    <table id="production2Table">
+                        <thead>
+                            <tr>
+                                <th>姓名</th>
+                                <th>出勤天数</th>
+                                <th>当月总工时(h)</th>
+                                <th>时薪(元/h)</th>
+                                <th>应发合计</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- 模房工资明细 -->
+        <div id="moldSection" style="display:none">
+            <div class="section-title">模房工资明细</div>
+            <div class="card" style="padding:0; overflow:hidden;">
+                <div class="table-wrapper">
+                    <table id="moldTable">
+                        <thead>
+                            <tr>
+                                <th>姓名</th>
+                                <th>班次</th>
+                                <th>出勤天数</th>
+                                <th>工作日(天)</th>
+                                <th>周末(天)</th>
+                                <th>基本工资</th>
+                                <th>加班工时(h)</th>
+                                <th>加班工资</th>
+                                <th>周末工时(h)</th>
+                                <th>周末工资</th>
+                                <th>总工时(h)</th>
+                                <th>时薪</th>
+                                <th>夜班补贴</th>
+                                <th>应发合计</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        <!-- 技术部工资明细 -->
+        <div id="techSection" style="display:none">
+            <div class="section-title">技术部工资明细</div>
+            <div class="card" style="padding:0; overflow:hidden;">
+                <div class="table-wrapper">
+                    <table id="techTable">
+                        <thead>
+                            <tr>
+                                <th>姓名</th>
+                                <th>应出勤(天)</th>
+                                <th>实际出勤(天)</th>
+                                <th>底薪标准</th>
+                                <th>岗位标准</th>
+                                <th>基本工资</th>
+                                <th>岗位工资</th>
+                                <th>节假日(天)</th>
+                                <th>节假日工资</th>
+                                <th>高温补贴</th>
+                                <th>应发合计</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 
@@ -267,6 +355,7 @@ document.getElementById('uploadForm').addEventListener('submit', async (e) => {
     formData.append('file', selectedFile);
     formData.append('year', document.getElementById('year').value);
     formData.append('month', document.getElementById('month').value);
+    formData.append('holidays', document.getElementById('holidays').value);
 
     document.getElementById('loading').style.display = 'block';
     document.getElementById('resultSection').style.display = 'none';
@@ -292,6 +381,26 @@ document.getElementById('uploadForm').addEventListener('submit', async (e) => {
 
 function fmt(n) {
     return typeof n === 'number' ? (Number.isInteger(n) ? n : n.toFixed(2)) : n;
+}
+
+function renderHourlyTable(results, sectionId, tableId) {
+    const section = document.getElementById(sectionId);
+    if (results && results.length > 0) {
+        let tbody = '';
+        results.forEach(r => {
+            tbody += `<tr>
+                <td>${r.name}</td>
+                <td>${r.work_days}</td>
+                <td>${r.total_hours}</td>
+                <td>${r.hourly_rate}</td>
+                <td class="salary-total">${fmt(r.total_salary)}</td>
+            </tr>`;
+        });
+        document.querySelector('#' + tableId + ' tbody').innerHTML = tbody;
+        section.style.display = 'block';
+    } else {
+        section.style.display = 'none';
+    }
 }
 
 function renderResult(data) {
@@ -343,21 +452,39 @@ function renderResult(data) {
     if (pr && pr.length > 0) {
         let tbody = '';
         pr.forEach(r => {
-            const shiftCls = r.shift_type === '夜班' ? 'night' : 'day';
-            tbody += `<tr>
-                <td>${r.name}</td>
-                <td><span class="shift-tag ${shiftCls}">${r.shift_type}</span></td>
-                <td>${r.workday_days}</td>
-                <td>${r.weekend_days}</td>
-                <td>${fmt(r.base_salary)}</td>
-                <td>${r.weekday_ot_hours}</td>
-                <td>${fmt(r.weekday_ot_salary)}</td>
-                <td>${r.weekend_hours}</td>
-                <td>${fmt(r.weekend_salary)}</td>
-                <td>${r.night_shift_days}</td>
-                <td>${fmt(r.night_snack)}</td>
-                <td class="salary-total">${fmt(r.total_salary)}</td>
-            </tr>`;
+            if (r.special) {
+                // 欧阳宇：专属规则
+                const nameTag = `${r.name}<span class="special-tag">特殊</span>`;
+                tbody += `<tr>
+                    <td>${nameTag}</td>
+                    <td>-</td>
+                    <td colspan="2">应出勤${r.required_days}天 / 实际${r.actual_days}天</td>
+                    <td>${fmt(r.base_salary)}</td>
+                    <td>-</td>
+                    <td>岗位:${fmt(r.position_salary)}</td>
+                    <td>-</td>
+                    <td>补贴:${fmt(r.subsidy)}</td>
+                    <td>节假日:${r.holidays}天</td>
+                    <td>${fmt(r.holiday_salary)}</td>
+                    <td class="salary-total">${fmt(r.total_salary)}</td>
+                </tr>`;
+            } else {
+                const shiftCls = r.shift_type === '夜班' ? 'night' : 'day';
+                tbody += `<tr>
+                    <td>${r.name}</td>
+                    <td><span class="shift-tag ${shiftCls}">${r.shift_type}</span></td>
+                    <td>${r.workday_days}</td>
+                    <td>${r.weekend_days}</td>
+                    <td>${fmt(r.base_salary)}</td>
+                    <td>${r.weekday_ot_hours}</td>
+                    <td>${fmt(r.weekday_ot_salary)}</td>
+                    <td>${r.weekend_hours}</td>
+                    <td>${fmt(r.weekend_salary)}</td>
+                    <td>${r.night_shift_days}</td>
+                    <td>${fmt(r.night_snack)}</td>
+                    <td class="salary-total">${fmt(r.total_salary)}</td>
+                </tr>`;
+            }
         });
         document.querySelector('#productionTable tbody').innerHTML = tbody;
         prodSection.style.display = 'block';
@@ -365,8 +492,101 @@ function renderResult(data) {
         prodSection.style.display = 'none';
     }
 
+    // 生产部2工资表
+    renderHourlyTable(data.production2_results, 'production2Section', 'production2Table');
+
+    // 模房工资表（混合：特殊人员走生产部规则，其他计时制）
+    renderMoldTable(data.mold_results);
+
+    // 技术部工资表
+    renderTechTable(data.tech_results);
+
     document.getElementById('resultSection').style.display = 'block';
     document.getElementById('resultSection').scrollIntoView({ behavior: 'smooth' });
+}
+
+function renderMoldTable(results) {
+    const section = document.getElementById('moldSection');
+    if (!results || results.length === 0) {
+        section.style.display = 'none';
+        return;
+    }
+    let tbody = '';
+    results.forEach(r => {
+        const nameTag = r.special
+            ? `${r.name}<span class="special-tag">特殊</span>`
+            : r.name;
+
+        if (r.special) {
+            // 生产部普工规则（张翱）
+            const shiftCls = r.shift_type === '夜班' ? 'night' : 'day';
+            tbody += `<tr>
+                <td>${nameTag}</td>
+                <td><span class="shift-tag ${shiftCls}">${r.shift_type}</span></td>
+                <td>${r.workday_days + r.weekend_days}</td>
+                <td>${r.workday_days}</td>
+                <td>${r.weekend_days}</td>
+                <td>${fmt(r.base_salary)}</td>
+                <td>${r.weekday_ot_hours}</td>
+                <td>${fmt(r.weekday_ot_salary)}</td>
+                <td>${r.weekend_hours}</td>
+                <td>${fmt(r.weekend_salary)}</td>
+                <td>-</td>
+                <td>-</td>
+                <td>${fmt(r.night_snack)}</td>
+                <td class="salary-total">${fmt(r.total_salary)}</td>
+            </tr>`;
+        } else {
+            // 计时制
+            tbody += `<tr>
+                <td>${nameTag}</td>
+                <td>-</td>
+                <td>${r.work_days}</td>
+                <td>-</td>
+                <td>-</td>
+                <td>-</td>
+                <td>-</td>
+                <td>-</td>
+                <td>-</td>
+                <td>-</td>
+                <td>${r.total_hours}</td>
+                <td>${r.hourly_rate}</td>
+                <td>-</td>
+                <td class="salary-total">${fmt(r.total_salary)}</td>
+            </tr>`;
+        }
+    });
+    document.querySelector('#moldTable tbody').innerHTML = tbody;
+    section.style.display = 'block';
+}
+
+function renderTechTable(results) {
+    const section = document.getElementById('techSection');
+    if (!results || results.length === 0) {
+        section.style.display = 'none';
+        return;
+    }
+    let tbody = '';
+    results.forEach(r => {
+        const nameTag = r.special
+            ? `${r.name}<span class="special-tag">特殊</span>`
+            : r.name;
+        tbody += `<tr>
+            <td>${nameTag}</td>
+            <td>${r.required_days}</td>
+            <td>${r.actual_days}</td>
+            <td>${r.base_total}</td>
+            <td>${r.position_total}</td>
+            <td>${fmt(r.base_salary)}</td>
+            <td>${fmt(r.position_salary)}</td>
+            <td>${r.holidays}</td>
+            <td>${fmt(r.holiday_salary)}</td>
+            <td>${r.high_temp}</td>
+            <td class="salary-total">${fmt(r.total_salary)}</td>
+        </tr>`;
+    });
+    document.querySelector('#techTable tbody').innerHTML = tbody;
+    section.style.display = 'block';
 }
 
 function toggleDept(header) {
