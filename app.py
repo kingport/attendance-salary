@@ -3,6 +3,7 @@
 启动: python3 app.py
 访问: http://localhost:5001
 """
+import io
 import os
 import re
 import calendar
@@ -12,7 +13,6 @@ from flask import Flask, render_template, request, jsonify
 import openpyxl
 
 app = Flask(__name__)
-app.config['UPLOAD_FOLDER'] = os.path.join(os.path.dirname(__file__), 'uploads')
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB
 
 # 生产部排除人员
@@ -339,9 +339,11 @@ def calc_ouyang(name, records, year, month, holidays=0):
     }
 
 
-def parse_excel(filepath, year, month):
-    """解析钉钉考勤报表，提取人员、部门、打卡记录"""
-    wb = openpyxl.load_workbook(filepath, read_only=False)
+def parse_excel(source, year, month):
+    """解析钉钉考勤报表，提取人员、部门、打卡记录
+    source: 文件路径（str）或 file-like 对象（如 io.BytesIO）
+    """
+    wb = openpyxl.load_workbook(source, read_only=False)
     if '打卡时间' in wb.sheetnames:
         ws = wb['打卡时间']
     else:
@@ -434,12 +436,11 @@ def parse():
     month = int(request.form.get('month', datetime.now().month))
     holidays = int(request.form.get('holidays', 0))
 
-    os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
-    filepath = os.path.join(app.config['UPLOAD_FOLDER'], file.filename)
-    file.save(filepath)
+    # 直接从内存读取，避免写磁盘（Vercel 无持久文件系统）
+    file_bytes = file.read()
 
     try:
-        data = parse_excel(filepath, year, month)
+        data = parse_excel(io.BytesIO(file_bytes), year, month)
 
         # 按部门分组
         dept_groups = {}
@@ -535,11 +536,7 @@ def parse():
         import traceback
         traceback.print_exc()
         return jsonify({'error': f'解析出错: {str(e)}'}), 500
-    finally:
-        if os.path.exists(filepath):
-            os.remove(filepath)
 
 
 if __name__ == '__main__':
-    os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
     app.run(debug=True, host='0.0.0.0', port=5001)
