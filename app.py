@@ -9,8 +9,9 @@ import re
 import calendar
 from datetime import datetime
 
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request, jsonify, send_file
 import openpyxl
+from openpyxl import Workbook
 
 app = Flask(__name__)
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB
@@ -536,6 +537,168 @@ def parse():
         import traceback
         traceback.print_exc()
         return jsonify({'error': f'解析出错: {str(e)}'}), 500
+
+
+def _num(v):
+    """数值格式化：None/空 → '-'；整数保留整数；浮点保留 2 位"""
+    if v is None or v == '':
+        return '-'
+    if isinstance(v, (int, float)):
+        return v if float(v).is_integer() else round(float(v), 2)
+    return v
+
+
+def _build_export_workbook(payload):
+    """根据前端传回的解析结果，构建多 sheet 的工资 Excel"""
+    wb = Workbook()
+    wb.remove(wb.active)
+
+    # 生产部
+    pr = payload.get('production_results') or []
+    if pr:
+        ws = wb.create_sheet('生产部')
+        ws.append(['姓名', '班次', '工作日出勤(天)', '周末出勤(天)',
+                   '基本工资', '加班工时(h)', '加班工资',
+                   '周末工时(h)', '周末工资',
+                   '夜班天数', '夜班补贴', '应发合计'])
+        for r in pr:
+            if r.get('special'):
+                # 欧阳宇专属规则
+                ws.append([
+                    r.get('name'), '特殊规则',
+                    f"应出勤{r.get('required_days')}/实际{r.get('actual_days')}",
+                    '-',
+                    _num(r.get('base_salary')),
+                    '-',
+                    f"岗位:{_num(r.get('position_salary'))}",
+                    '-',
+                    f"补贴:{_num(r.get('subsidy'))}",
+                    f"节假日:{r.get('holidays')}天",
+                    _num(r.get('holiday_salary')),
+                    _num(r.get('total_salary')),
+                ])
+            else:
+                ws.append([
+                    r.get('name'), r.get('shift_type'),
+                    r.get('workday_days'), r.get('weekend_days'),
+                    _num(r.get('base_salary')),
+                    r.get('weekday_ot_hours'), _num(r.get('weekday_ot_salary')),
+                    r.get('weekend_hours'), _num(r.get('weekend_salary')),
+                    r.get('night_shift_days'), _num(r.get('night_snack')),
+                    _num(r.get('total_salary')),
+                ])
+
+    # 生产部2（计时制）
+    p2 = payload.get('production2_results') or []
+    if p2:
+        ws = wb.create_sheet('生产部2')
+        ws.append(['姓名', '出勤天数', '当月总工时(h)', '时薪(元/h)', '应发合计'])
+        for r in p2:
+            ws.append([
+                r.get('name'), r.get('work_days'),
+                r.get('total_hours'), r.get('hourly_rate'),
+                _num(r.get('total_salary')),
+            ])
+
+    # 模房
+    md = payload.get('mold_results') or []
+    if md:
+        ws = wb.create_sheet('模房')
+        ws.append(['姓名', '班次/规则', '工作日(天)', '周末(天)',
+                   '基本工资', '加班工时(h)', '加班工资',
+                   '周末工时(h)', '周末工资',
+                   '总工时(h)', '时薪', '夜班补贴', '应发合计'])
+        for r in md:
+            if r.get('special'):
+                # 张翱走生产部普工规则
+                ws.append([
+                    r.get('name'), r.get('shift_type'),
+                    r.get('workday_days'), r.get('weekend_days'),
+                    _num(r.get('base_salary')),
+                    r.get('weekday_ot_hours'), _num(r.get('weekday_ot_salary')),
+                    r.get('weekend_hours'), _num(r.get('weekend_salary')),
+                    '-', '-',
+                    _num(r.get('night_snack')),
+                    _num(r.get('total_salary')),
+                ])
+            else:
+                # 计时制
+                ws.append([
+                    r.get('name'), '计时制',
+                    r.get('work_days'), '-',
+                    '-', '-', '-', '-', '-',
+                    r.get('total_hours'), r.get('hourly_rate'),
+                    '-',
+                    _num(r.get('total_salary')),
+                ])
+
+    # 技术部
+    tc = payload.get('tech_results') or []
+    if tc:
+        ws = wb.create_sheet('技术部')
+        ws.append(['姓名', '应出勤(天)', '实际出勤(天)',
+                   '底薪标准', '岗位标准',
+                   '基本工资', '岗位工资',
+                   '节假日(天)', '节假日工资', '高温补贴',
+                   '应发合计'])
+        for r in tc:
+            ws.append([
+                r.get('name'),
+                r.get('required_days'), r.get('actual_days'),
+                r.get('base_total'), r.get('position_total'),
+                _num(r.get('base_salary')), _num(r.get('position_salary')),
+                r.get('holidays'), _num(r.get('holiday_salary')),
+                r.get('high_temp'),
+                _num(r.get('total_salary')),
+            ])
+
+    # 没有任何结果也要有一个 sheet，防止 openpyxl 报错
+    if not wb.sheetnames:
+        ws = wb.create_sheet('无数据')
+        ws.append(['无可导出的工资数据'])
+
+    # 自动列宽（粗略估算）
+    for ws in wb.worksheets:
+        for col_idx, col in enumerate(ws.columns, start=1):
+            max_len = 0
+            for cell in col:
+                v = cell.value
+                if v is None:
+                    continue
+                # 中文占 2 位宽度
+                w = sum(2 if ord(ch) > 127 else 1 for ch in str(v))
+                if w > max_len:
+                    max_len = w
+            ws.column_dimensions[openpyxl.utils.get_column_letter(col_idx)].width = min(max_len + 2, 30)
+
+    return wb
+
+
+@app.route('/export', methods=['POST'])
+def export_excel():
+    """接收前端传回的解析结果，生成多 sheet 的工资 Excel"""
+    try:
+        payload = request.get_json(force=True) or {}
+        year = int(payload.get('year') or datetime.now().year)
+        month = int(payload.get('month') or datetime.now().month)
+
+        wb = _build_export_workbook(payload)
+
+        buf = io.BytesIO()
+        wb.save(buf)
+        buf.seek(0)
+
+        filename = f"gongzi_{year}_{month:02d}.xlsx"
+        return send_file(
+            buf,
+            as_attachment=True,
+            download_name=filename,
+            mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        )
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': f'导出失败: {str(e)}'}), 500
 
 
 if __name__ == '__main__':

@@ -43,6 +43,14 @@
         .btn-primary { background: #1677ff; color: #fff; }
         .btn-primary:hover { background: #4096ff; }
         .btn-primary:disabled { background: #d9d9d9; cursor: not-allowed; }
+        .btn-success { background: #52c41a; color: #fff; }
+        .btn-success:hover { background: #73d13d; }
+        .btn-success:disabled { background: #d9d9d9; cursor: not-allowed; }
+
+        .export-bar {
+            display: flex; justify-content: flex-end; align-items: center;
+            gap: 12px; margin-bottom: 16px;
+        }
 
         .loading { display: none; text-align: center; padding: 40px; }
         .loading .spinner {
@@ -208,6 +216,11 @@
             </div>
         </div>
 
+        <!-- 导出按钮 -->
+        <div class="export-bar">
+            <button type="button" class="btn btn-success" id="exportBtn">📥 导出 Excel</button>
+        </div>
+
         <!-- 部门分组列表 -->
         <div id="deptList"></div>
 
@@ -323,6 +336,7 @@ const dropZone = document.getElementById('dropZone');
 const fileInput = document.getElementById('fileInput');
 const parseBtn = document.getElementById('parseBtn');
 let selectedFile = null;
+let lastParsedData = null;  // 缓存最近一次解析结果，供导出使用
 
 dropZone.addEventListener('click', () => fileInput.click());
 fileInput.addEventListener('change', (e) => {
@@ -404,6 +418,7 @@ function renderHourlyTable(results, sectionId, tableId) {
 }
 
 function renderResult(data) {
+    lastParsedData = data;  // 缓存给导出按钮使用
     document.getElementById('statRange').textContent = data.date_range;
     document.getElementById('statTotal').textContent = data.total_count;
     document.getElementById('statActive').textContent = data.active_count;
@@ -593,6 +608,51 @@ function toggleDept(header) {
     header.classList.toggle('collapsed');
     header.nextElementSibling.classList.toggle('collapsed');
 }
+
+// 导出 Excel
+document.getElementById('exportBtn').addEventListener('click', async () => {
+    if (!lastParsedData) {
+        alert('请先解析考勤表');
+        return;
+    }
+    const exportBtn = document.getElementById('exportBtn');
+    exportBtn.disabled = true;
+    const originalText = exportBtn.textContent;
+    exportBtn.textContent = '导出中...';
+
+    try {
+        const year = document.getElementById('year').value;
+        const month = document.getElementById('month').value;
+        const payload = Object.assign({}, lastParsedData, { year, month });
+
+        const res = await fetch('/export', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+        });
+
+        if (!res.ok) {
+            const err = await res.json().catch(() => ({ error: '导出失败' }));
+            alert(err.error || '导出失败');
+            return;
+        }
+
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `工资计算_${year}年${month}月.xlsx`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    } catch (err) {
+        alert('导出失败: ' + err.message);
+    } finally {
+        exportBtn.disabled = false;
+        exportBtn.textContent = originalText;
+    }
+});
 </script>
 </body>
 </html>
